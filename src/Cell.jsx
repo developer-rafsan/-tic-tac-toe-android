@@ -6,6 +6,7 @@ const O_COLOR = '#2ed573';
 
 const Cell = ({ value, onPress, disabled, cellSize }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.timing(flipAnim, {
@@ -14,6 +15,24 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
       useNativeDriver: true,
     }).start();
   }, [value, flipAnim]);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.92,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 150,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 150,
+    }).start();
+  };
 
   const frontRotate = flipAnim.interpolate({
     inputRange: [0, 1],
@@ -27,31 +46,39 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
 
   return (
     <TouchableOpacity
-      style={[styles.cell, { width: cellSize, height: cellSize }]}
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled || !!value}
-      activeOpacity={0.8}
+      activeOpacity={1}
     >
-      <View style={styles.inner}>
-        <Animated.View
-          style={[
-            styles.face,
-            styles.front,
-            { transform: [{ perspective: 1000 }, { rotateY: frontRotate }] },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.face,
-            styles.back,
-            { transform: [{ perspective: 1000 }, { rotateY: backRotate }] },
-          ]}
-        >
-          <Text style={[styles.text, value === 'X' ? styles.x : styles.o]}>
-            {value}
-          </Text>
-        </Animated.View>
-      </View>
+      <Animated.View
+        style={[
+          styles.cell,
+          { width: cellSize, height: cellSize, transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        <View style={styles.inner}>
+          <Animated.View
+            style={[
+              styles.face,
+              styles.front,
+              { transform: [{ perspective: 1000 }, { rotateY: frontRotate }] },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.face,
+              styles.back,
+              { transform: [{ perspective: 1000 }, { rotateY: backRotate }] },
+            ]}
+          >
+            <Text style={[styles.text, value === 'X' ? styles.x : styles.o]}>
+              {value}
+            </Text>
+          </Animated.View>
+        </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 };
@@ -62,10 +89,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   inner: {
     width: '100%',
@@ -98,9 +125,15 @@ const styles = StyleSheet.create({
   },
   x: {
     color: X_COLOR,
+    textShadowColor: X_COLOR,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   o: {
     color: O_COLOR,
+    textShadowColor: O_COLOR,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
 });
 

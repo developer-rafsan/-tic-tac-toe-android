@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Cell from './Cell';
 import { checkWinner, isBoardFull, getNextTurn, createEmptyBoard } from './gameLogic';
 
@@ -16,6 +15,22 @@ const O_COLOR = '#2ed573';
 const BOARD_SIZE = Math.min(Dimensions.get('window').width - 56, 320);
 const GAP = 6;
 const CELL_SIZE = (BOARD_SIZE - GAP * 2) / 3;
+
+const PlayerBadge = ({ symbol, label, active }) => {
+  const isX = symbol === 'X';
+  const color = isX ? X_COLOR : O_COLOR;
+  return (
+    <View style={[styles.badge, active && { borderColor: color }]}>
+      <View style={[styles.badgeDot, { backgroundColor: color }, !active && styles.badgeDotOff]}>
+        <Text style={styles.badgeDotText}>{symbol}</Text>
+      </View>
+      <View>
+        <Text style={styles.badgeLabel}>{label}</Text>
+        {active && <Text style={[styles.badgeStatus, { color }]}>Playing</Text>}
+      </View>
+    </View>
+  );
+};
 
 const OfflineGame = ({ onBack }) => {
   const [board, setBoard] = useState(createEmptyBoard);
@@ -28,22 +43,12 @@ const OfflineGame = ({ onBack }) => {
   const handleMove = useCallback(
     (index) => {
       if (board[index] || gameOver) return;
-
       const newBoard = [...board];
       newBoard[index] = currentTurn;
       setBoard(newBoard);
-
       const win = checkWinner(newBoard);
-      if (win) {
-        setWinner(win);
-        return;
-      }
-
-      if (isBoardFull(newBoard)) {
-        setIsDraw(true);
-        return;
-      }
-
+      if (win) { setWinner(win); return; }
+      if (isBoardFull(newBoard)) { setIsDraw(true); return; }
       setCurrentTurn(getNextTurn(currentTurn));
     },
     [board, currentTurn, gameOver],
@@ -57,128 +62,135 @@ const OfflineGame = ({ onBack }) => {
   };
 
   return (
-    <LinearGradient colors={['#0F0C29', '#302B63']} style={styles.container}>
-      <View style={styles.topBar}>
-        <View style={styles.playerGroup}>
-          <View style={[styles.dot, styles.dotX, currentTurn !== 'X' && styles.dotInactive]}>
-            <Text style={styles.dotText}>✕</Text>
-          </View>
-          <Text style={styles.vsText}>vs</Text>
-          <View style={[styles.dot, styles.dotO, currentTurn !== 'O' && styles.dotInactive]}>
-            <Text style={styles.dotText}>○</Text>
-          </View>
+    <View style={styles.container}>
+      <View style={styles.topSection}>
+        <PlayerBadge symbol="X" label="Player X" active={currentTurn === 'X'} />
+        <View style={styles.turnCenter}>
+          <View style={[styles.turnDot, { backgroundColor: currentTurn === 'X' ? X_COLOR : O_COLOR }]} />
+          <Text style={styles.turnText}>{currentTurn}'s Turn</Text>
         </View>
-        <View style={styles.turnPill}>
-          <Text style={styles.turnPillText}>
-            {currentTurn === 'X' ? "✕'s Turn" : "○'s Turn"}
-          </Text>
+        <PlayerBadge symbol="O" label="Player O" active={currentTurn === 'O'} />
+      </View>
+
+      <View style={styles.boardWrap}>
+        <View style={styles.boardBox}>
+          <View style={[styles.board, { width: BOARD_SIZE, height: BOARD_SIZE }]}>
+            {board.map((value, index) => (
+              <Cell key={index} value={value} index={index} onPress={() => handleMove(index)} disabled={gameOver} cellSize={CELL_SIZE} />
+            ))}
+          </View>
         </View>
       </View>
 
-      <View style={styles.boardContainer}>
-        <View style={[styles.board, { width: BOARD_SIZE, height: BOARD_SIZE }]}>
-          {board.map((value, index) => (
-            <Cell
-              key={index}
-              value={value}
-              index={index}
-              onPress={() => handleMove(index)}
-              disabled={gameOver}
-              cellSize={CELL_SIZE}
-            />
-          ))}
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Text style={styles.backBtnText}>⟵ Home</Text>
+      <TouchableOpacity style={styles.footer} onPress={onBack}>
+        <Text style={styles.footerText}>← Home</Text>
       </TouchableOpacity>
 
       {gameOver && (
         <View style={styles.overlay}>
           <View style={styles.modal}>
-            <Text style={[styles.modalSymbol, isDraw ? styles.modalSymbolDraw : winner === 'X' ? styles.modalSymbolX : styles.modalSymbolO]}>
-              {isDraw ? '∅' : winner}
-            </Text>
-            <Text style={styles.modalTitle}>
-              {isDraw ? "It's a Draw!" : `${winner} Wins!`}
-            </Text>
-            <Text style={styles.modalSubtitle}>Game Over</Text>
+            <View style={[styles.modalIconWrap, isDraw ? styles.modalIconDrawBg : winner === 'X' ? styles.modalIconX : styles.modalIconO]}>
+              <Text style={styles.modalIcon}>{isDraw ? '—' : winner}</Text>
+            </View>
+            <Text style={styles.modalTitle}>{isDraw ? "It's a Draw!" : `${winner} Wins!`}</Text>
+            <View style={styles.modalLine} />
             <TouchableOpacity style={styles.modalBtn} onPress={resetGame}>
               <Text style={styles.modalBtnText}>Play Again</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalBtnSecondary} onPress={onBack}>
-              <Text style={styles.modalBtnSecondaryText}>Main Menu</Text>
+            <TouchableOpacity onPress={onBack}>
+              <Text style={styles.modalSecondary}>Main Menu</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f2f5f9',
     alignItems: 'center',
   },
-  topBar: {
+  topSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
-  playerGroup: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  dot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  badgeDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dotX: {
-    backgroundColor: X_COLOR,
+  badgeDotOff: {
+    opacity: 0.25,
   },
-  dotO: {
-    backgroundColor: O_COLOR,
-  },
-  dotInactive: {
-    opacity: 0.35,
-  },
-  dotText: {
-    fontSize: 16,
+  badgeDotText: {
+    fontSize: 13,
     fontWeight: '800',
     color: '#fff',
   },
-  vsText: {
-    fontSize: 13,
+  badgeLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1a1a2e',
+  },
+  badgeStatus: {
+    fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
+    marginTop: 1,
   },
-  turnPill: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  turnCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  turnPillText: {
+  turnDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  turnText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+    color: 'rgba(0,0,0,0.5)',
   },
-  boardContainer: {
+  boardWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  boardBox: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   board: {
     flexDirection: 'row',
@@ -186,88 +198,86 @@ const styles = StyleSheet.create({
     gap: GAP,
     alignContent: 'flex-start',
   },
-  backBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 36,
+  footer: {
+    paddingVertical: 14,
+    marginBottom: 32,
   },
-  backBtnText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 15,
+  footerText: {
+    fontSize: 14,
+    color: 'rgba(0,0,0,0.3)',
     fontWeight: '500',
   },
   overlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
   },
   modal: {
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: '#fff',
     borderRadius: 24,
-    paddingVertical: 36,
+    paddingVertical: 32,
     paddingHorizontal: 32,
     alignItems: 'center',
     width: 280,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 28,
-    elevation: 14,
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  modalSymbol: {
-    fontSize: 48,
+  modalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  modalIconX: {
+    backgroundColor: X_COLOR,
+  },
+  modalIconO: {
+    backgroundColor: O_COLOR,
+  },
+  modalIconDrawBg: {
+    backgroundColor: '#eee',
+  },
+  modalIcon: {
+    fontSize: 26,
     fontWeight: '800',
-    marginBottom: 12,
-  },
-  modalSymbolX: {
-    color: X_COLOR,
-  },
-  modalSymbolO: {
-    color: O_COLOR,
-  },
-  modalSymbolDraw: {
-    color: '#888',
+    color: '#fff',
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1a1a2e',
-    marginBottom: 4,
   },
-  modalSubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#999',
-    textTransform: 'uppercase',
-    letterSpacing: 3,
-    marginBottom: 28,
+  modalLine: {
+    width: 32,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    marginTop: 10,
+    marginBottom: 24,
   },
   modalBtn: {
     width: '100%',
     paddingVertical: 14,
-    backgroundColor: '#302B63',
+    backgroundColor: '#1a1a2e',
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   modalBtnText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
   },
-  modalBtnSecondary: {
-    width: '100%',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  modalBtnSecondaryText: {
-    fontSize: 15,
+  modalSecondary: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#999',
   },
