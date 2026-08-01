@@ -1,4 +1,4 @@
-const RELAY_URL = 'wss://tictactoe-relay.onrender.com';
+const RELAY_URL = 'wss://tic-tac-toe-android.onrender.com';
 
 const COMMON_IPS = [
   '192.168.43.1', '192.168.0.1', '192.168.1.1',

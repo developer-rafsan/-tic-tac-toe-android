@@ -3,7 +3,9 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { findServer, connectRelay } from './network';
+import { BG_GRADIENT } from './theme';
 
 const X_COLOR = '#ff4757';
 const O_COLOR = '#2ed573';
@@ -71,7 +73,7 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={BG_GRADIENT} style={styles.container}>
       {screen === 'main' ? (
         <View style={styles.mainContent}>
           <View style={styles.header}>
@@ -149,7 +151,7 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 };
 

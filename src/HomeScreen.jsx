@@ -1,65 +1,167 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Text, StyleSheet, View, Pressable } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { COLORS, BG_GRADIENT, HOME_HERO_GRADIENT } from './theme';
 
-const X_COLOR = '#ff4757';
-const O_COLOR = '#2ed573';
+const X_COLOR = COLORS.x;
+const O_COLOR = COLORS.o;
+const AI_COLOR = COLORS.ai;
 
-const HomeScreen = ({ onOffline, onOnline }) => {
+const MenuCard = ({ icon, title, desc, color, delay, onPress }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const enter = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: 420,
+      delay,
+      useNativeDriver: true,
+    }).start();
+  }, [enter, delay]);
+
+  const translateY = enter.interpolate({
+    inputRange: [0, 1],
+    outputRange: [24, 0],
+  });
+
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.97,
+      friction: 7,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 5,
+      tension: 160,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={{ opacity: enter, transform: [{ translateY }] }}
+    >
+      <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+        <LinearGradient
+          colors={['#ffffff', '#fbfcfe']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cardGradient}
+        >
+          <Pressable
+            style={styles.cardTouch}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={onPress}
+          >
+            <View style={styles.cardRow}>
+              <View style={[styles.iconWrap, { backgroundColor: `${color}18` }]}>
+                <Text style={styles.icon}>{icon}</Text>
+              </View>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{title}</Text>
+                <Text style={styles.cardDesc}>{desc}</Text>
+              </View>
+              <View style={[styles.chevron, { borderColor: `${color}55` }]}>
+                <Text style={[styles.chevronText, { color }]}>›</Text>
+              </View>
+            </View>
+          </Pressable>
+        </LinearGradient>
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+const HomeScreen = ({ onOffline, onAutoPlay, onOnline, onHistory }) => {
+  const heroAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(heroAnim, {
+      toValue: 1,
+      friction: 5,
+      tension: 60,
+      useNativeDriver: true,
+    }).start();
+  }, [heroAnim]);
+
+  const heroScale = heroAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.85, 1],
+  });
+
+  return (
+    <LinearGradient colors={BG_GRADIENT} style={styles.container}>
       <View style={styles.hero}>
-        <View style={styles.symbolRow}>
-          <View style={styles.symbolCircleX}>
-            <Text style={[styles.symbolChar, styles.symbolX]}>✕</Text>
-          </View>
-          <View style={styles.symbolSpacer} />
-          <View style={styles.symbolCircleO}>
-            <Text style={[styles.symbolChar, styles.symbolO]}>○</Text>
-          </View>
-        </View>
-        <Text style={styles.title}>Tic Tac Toe</Text>
-        <Text style={styles.subtitle}>Classic 2-Player Game</Text>
+        <Animated.View
+          style={{ opacity: heroAnim, transform: [{ scale: heroScale }] }}
+        >
+          <LinearGradient
+            colors={HOME_HERO_GRADIENT}
+            style={styles.heroCard}
+          >
+            <View style={styles.symbolRow}>
+              <View style={[styles.symbolCircle, styles.symbolCircleX]}>
+                <Text style={[styles.symbolChar, styles.symbolX]}>✕</Text>
+              </View>
+              <View style={styles.symbolSpacer} />
+              <View style={[styles.symbolCircle, styles.symbolCircleO]}>
+                <Text style={[styles.symbolChar, styles.symbolO]}>○</Text>
+              </View>
+            </View>
+            <Text style={styles.title}>Tic Tac Toe</Text>
+            <Text style={styles.subtitle}>Classic 2-Player Game</Text>
+          </LinearGradient>
+        </Animated.View>
       </View>
 
       <View style={styles.cardSection}>
-        <TouchableOpacity
-          style={styles.card}
+        <MenuCard
+          icon="📱"
+          title="Offline Game"
+          desc="Play with a friend on this device"
+          color={X_COLOR}
+          delay={120}
           onPress={onOffline}
-          activeOpacity={0.92}
-        >
-          <View style={[styles.cardStripe, { backgroundColor: X_COLOR }]} />
-          <View style={styles.cardBody}>
-            <Text style={styles.cardIcon}>📱</Text>
-            <View style={styles.cardTextGroup}>
-              <Text style={styles.cardTitle}>Offline Game</Text>
-              <Text style={styles.cardDesc}>Play with a friend on this device</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
+        />
+        <MenuCard
+          icon="🤖"
+          title="Auto Play"
+          desc="Play against the computer"
+          color={AI_COLOR}
+          delay={220}
+          onPress={onAutoPlay}
+        />
+        <MenuCard
+          icon="🌐"
+          title="Online Game"
+          desc="Play over WiFi or hotspot"
+          color={O_COLOR}
+          delay={320}
           onPress={onOnline}
-          activeOpacity={0.92}
-        >
-          <View style={[styles.cardStripe, { backgroundColor: O_COLOR }]} />
-          <View style={styles.cardBody}>
-            <Text style={styles.cardIcon}>🌐</Text>
-            <View style={styles.cardTextGroup}>
-              <Text style={styles.cardTitle}>Online Game</Text>
-              <Text style={styles.cardDesc}>Play over WiFi or hotspot</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+        />
+        <MenuCard
+          icon="📜"
+          title="History"
+          desc="View your past games"
+          color={COLORS.text}
+          delay={420}
+          onPress={onHistory}
+        />
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f5f9',
     paddingHorizontal: 24,
   },
   hero: {
@@ -67,34 +169,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  heroCard: {
+    alignItems: 'center',
+    paddingVertical: 34,
+    paddingHorizontal: 44,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 6,
+  },
   symbolRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 22,
   },
-  symbolCircleX: {
+  symbolCircle: {
     width: 72,
     height: 72,
-    borderRadius: 20,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  symbolCircleX: {
+    borderRadius: 20,
     shadowColor: X_COLOR,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.22,
     shadowRadius: 12,
     elevation: 6,
   },
   symbolCircleO: {
-    width: 72,
-    height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: O_COLOR,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.22,
     shadowRadius: 12,
     elevation: 6,
   },
@@ -114,14 +226,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 38,
     fontWeight: '800',
-    color: '#1a1a2e',
+    color: COLORS.text,
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 13,
-    color: 'rgba(0,0,0,0.35)',
-    fontWeight: '600',
+    fontSize: 12,
+    color: COLORS.textFaint,
+    fontWeight: '700',
     letterSpacing: 3,
     textTransform: 'uppercase',
   },
@@ -130,44 +242,63 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    flexDirection: 'row',
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 12,
     elevation: 3,
   },
-  cardStripe: {
-    width: 5,
+  cardGradient: {
+    borderRadius: 20,
   },
-  cardBody: {
-    flex: 1,
+  cardTouch: {
+    borderRadius: 20,
+  },
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingRight: 18,
-    paddingLeft: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  cardIcon: {
-    fontSize: 26,
-    marginRight: 14,
+  iconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  cardTextGroup: {
+  icon: {
+    fontSize: 22,
+  },
+  cardText: {
     flex: 1,
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1a1a2e',
+    color: COLORS.text,
     marginBottom: 2,
   },
   cardDesc: {
     fontSize: 13,
-    color: 'rgba(0,0,0,0.4)',
+    color: COLORS.textDim,
     fontWeight: '500',
+  },
+  chevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chevronText: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: -1,
   },
 });
 

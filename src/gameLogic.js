@@ -9,13 +9,18 @@ export const WIN_CONDITIONS = [
   [2, 4, 6],
 ];
 
-export const checkWinner = (board) => {
+export const getWinningLine = (board) => {
   for (const cond of WIN_CONDITIONS) {
     if (board[cond[0]] && board[cond[0]] === board[cond[1]] && board[cond[0]] === board[cond[2]]) {
-      return board[cond[0]];
+      return cond;
     }
   }
   return null;
+};
+
+export const checkWinner = (board) => {
+  const line = getWinningLine(board);
+  return line ? board[line[0]] : null;
 };
 
 export const isBoardFull = (board) => board.every((cell) => cell !== '');

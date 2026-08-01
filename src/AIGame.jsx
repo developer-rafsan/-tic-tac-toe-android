@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Animated, View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Cell from './Cell';
 import ResultModal from './ResultModal';
 import WinningLine from './WinningLine';
-import { checkWinner, getWinningLine, isBoardFull, getNextTurn, createEmptyBoard } from './gameLogic';
+import { checkWinner, getWinningLine, isBoardFull, createEmptyBoard } from './gameLogic';
+import { getAIMove } from './ai';
 import { COLORS, BG_GRADIENT } from './theme';
 import { saveGameResult } from './history';
 
@@ -15,9 +16,24 @@ const BOARD_SIZE = Math.min(Dimensions.get('window').width - 56, 320);
 const GAP = 6;
 const CELL_SIZE = (BOARD_SIZE - GAP * 2) / 3;
 
-const PlayerBadge = ({ symbol, label, active, score }) => {
+const PlayerBadge = ({ symbol, label, active, score, thinking }) => {
   const isX = symbol === 'X';
   const color = isX ? X_COLOR : O_COLOR;
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (thinking) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+  }, [thinking, pulse]);
+
   return (
     <View style={[styles.badge, active && { borderColor: color, shadowColor: color }]}>
       <View style={[styles.badgeDot, { backgroundColor: color }, !active && styles.badgeDotOff]}>
@@ -25,7 +41,11 @@ const PlayerBadge = ({ symbol, label, active, score }) => {
       </View>
       <View>
         <Text style={styles.badgeLabel}>{label}</Text>
-        <Text style={[styles.badgeScore, { color }]}>{score} {active ? '●' : ''}</Text>
+        {thinking ? (
+          <Animated.View style={[styles.thinkingDot, { opacity: pulse }]} />
+        ) : (
+          <Text style={[styles.badgeScore, { color }]}>{score} {active ? '●' : ''}</Text>
+        )}
       </View>
     </View>
   );
@@ -38,13 +58,15 @@ const ScorePill = ({ label, value }) => (
   </View>
 );
 
-const OfflineGame = ({ onBack }) => {
+const AIGame = ({ onBack }) => {
   const [board, setBoard] = useState(createEmptyBoard);
   const [currentTurn, setCurrentTurn] = useState('X');
   const [winner, setWinner] = useState(null);
   const [isDraw, setIsDraw] = useState(false);
+  const [aiThinking, setAiThinking] = useState(false);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [modalVisible, setModalVisible] = useState(false);
+  const timerRef = useRef(null);
   const boardAnim = useRef(new Animated.Value(0)).current;
 
   const gameOver = winner !== null || isDraw;
@@ -66,40 +88,49 @@ const OfflineGame = ({ onBack }) => {
     }).start();
   }, [boardAnim]);
 
-  const boardScale = boardAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.92, 1],
-  });
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
-  const handleMove = useCallback(
-    (index) => {
-      if (board[index] || gameOver) return;
-      const newBoard = [...board];
-      newBoard[index] = currentTurn;
-      setBoard(newBoard);
-      const win = checkWinner(newBoard);
-      if (win) {
-        setWinner(win);
-        setScores((s) => ({ ...s, [win]: s[win] + 1 }));
-        saveGameResult({ mode: 'Offline', symbol: win, text: `${win} Wins!` });
-        return;
-      }
-      if (isBoardFull(newBoard)) {
-        setIsDraw(true);
-        setScores((s) => ({ ...s, draws: s.draws + 1 }));
-        saveGameResult({ mode: 'Offline', symbol: '—', text: "It's a Draw!" });
-        return;
-      }
-      setCurrentTurn(getNextTurn(currentTurn));
-    },
-    [board, currentTurn, gameOver],
-  );
+  useEffect(() => {
+    if (currentTurn === 'O' && !gameOver) {
+      setAiThinking(true);
+      timerRef.current = setTimeout(() => {
+        const boardCopy = [...board];
+        const aiIndex = getAIMove(boardCopy, 'O');
+        if (aiIndex === -1) { setAiThinking(false); return; }
+        const newBoard = [...board];
+        newBoard[aiIndex] = 'O';
+        setBoard(newBoard);
+        const win = checkWinner(newBoard);
+        if (win) { setWinner(win); setScores((s) => ({ ...s, O: s.O + 1 })); saveGameResult({ mode: 'Auto Play', symbol: 'O', text: 'AI Wins!' }); setAiThinking(false); return; }
+        if (isBoardFull(newBoard)) { setIsDraw(true); setScores((s) => ({ ...s, draws: s.draws + 1 })); saveGameResult({ mode: 'Auto Play', symbol: '—', text: "It's a Draw!" }); setAiThinking(false); return; }
+        setCurrentTurn('X');
+        setAiThinking(false);
+      }, 500);
+    }
+  }, [currentTurn, gameOver, board]);
+
+  const handleMove = (index) => {
+    if (board[index] || gameOver || aiThinking || currentTurn !== 'X') return;
+    const newBoard = [...board];
+    newBoard[index] = 'X';
+    setBoard(newBoard);
+    const win = checkWinner(newBoard);
+    if (win) { setWinner(win); setScores((s) => ({ ...s, X: s.X + 1 })); saveGameResult({ mode: 'Auto Play', symbol: 'X', text: 'You Win!' }); return; }
+    if (isBoardFull(newBoard)) { setIsDraw(true); setScores((s) => ({ ...s, draws: s.draws + 1 })); saveGameResult({ mode: 'Auto Play', symbol: '—', text: "It's a Draw!" }); return; }
+    setCurrentTurn('O');
+  };
 
   const resetGame = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
     setBoard(createEmptyBoard());
     setCurrentTurn('X');
     setWinner(null);
     setIsDraw(false);
+    setAiThinking(false);
   };
 
   const goHome = () => {
@@ -107,21 +138,28 @@ const OfflineGame = ({ onBack }) => {
     onBack();
   };
 
+  const boardScale = boardAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.92, 1],
+  });
+
   return (
     <LinearGradient colors={BG_GRADIENT} style={styles.container}>
       <View style={styles.topSection}>
-        <PlayerBadge symbol="X" label="Player X" score={scores.X} active={currentTurn === 'X'} />
+        <PlayerBadge symbol="X" label="You" score={scores.X} active={currentTurn === 'X'} />
         <View style={styles.turnCenter}>
           <View style={[styles.turnDot, { backgroundColor: currentTurn === 'X' ? X_COLOR : O_COLOR }]} />
-          <Text style={styles.turnText}>{currentTurn}'s Turn</Text>
+          <Text style={styles.turnText}>
+            {currentTurn === 'X' ? 'Your Turn' : 'AI Thinking...'}
+          </Text>
         </View>
-        <PlayerBadge symbol="O" label="Player O" score={scores.O} active={currentTurn === 'O'} />
+        <PlayerBadge symbol="O" label="AI" score={scores.O} active={currentTurn === 'O'} thinking={aiThinking} />
       </View>
 
       <View style={styles.scoreRow}>
-        <ScorePill label="X" value={scores.X} />
+        <ScorePill label="You" value={scores.X} />
         <ScorePill label="Draw" value={scores.draws} />
-        <ScorePill label="O" value={scores.O} />
+        <ScorePill label="AI" value={scores.O} />
       </View>
 
       <Animated.View style={[styles.boardWrap, { transform: [{ scale: boardScale }] }]}>
@@ -133,7 +171,7 @@ const OfflineGame = ({ onBack }) => {
                 value={value}
                 index={index}
                 onPress={() => handleMove(index)}
-                disabled={gameOver}
+                disabled={gameOver || aiThinking || currentTurn !== 'X'}
                 winning={!!winningLine && winningLine.includes(index)}
                 cellSize={CELL_SIZE}
               />
@@ -163,8 +201,8 @@ const OfflineGame = ({ onBack }) => {
         visible={modalVisible}
         icon={isDraw ? '—' : winner}
         iconBg={isDraw ? '#c9ccd6' : winner === 'X' ? X_COLOR : O_COLOR}
-        title={isDraw ? "It's a Draw!" : `${winner} Wins!`}
-        subtitle={isDraw ? 'No more moves left' : 'Great game, play again?'}
+        title={isDraw ? "It's a Draw!" : winner === 'X' ? 'You Win!' : 'AI Wins!'}
+        subtitle={isDraw ? 'No more moves left' : winner === 'X' ? 'Great play!' : 'Better luck next time'}
         primaryLabel="Play Again"
         onPrimary={resetGame}
         secondaryLabel="Main Menu"
@@ -227,6 +265,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
+  },
+  thinkingDot: {
+    width: 18,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: O_COLOR,
+    marginTop: 3,
   },
   turnCenter: {
     flexDirection: 'row',
@@ -316,4 +361,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OfflineGame;
+export default AIGame;

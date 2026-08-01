@@ -1,12 +1,11 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { COLORS } from './theme';
 
-const X_COLOR = '#ff4757';
-const O_COLOR = '#2ed573';
-
-const Cell = ({ value, onPress, disabled, cellSize }) => {
+const Cell = ({ value, onPress, disabled, cellSize, winning }) => {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const winAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(flipAnim, {
@@ -15,6 +14,19 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
       useNativeDriver: true,
     }).start();
   }, [value, flipAnim]);
+
+  useEffect(() => {
+    if (winning) {
+      Animated.spring(winAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 120,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      winAnim.setValue(0);
+    }
+  }, [winning, winAnim]);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -44,6 +56,18 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
     outputRange: ['180deg', '360deg'],
   });
 
+  const winScale = winAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
+
+  const glowOpacity = winAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const glowColor = value === 'X' ? COLORS.x : COLORS.o;
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -70,10 +94,33 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
             style={[
               styles.face,
               styles.back,
-              { transform: [{ perspective: 1000 }, { rotateY: backRotate }] },
+              {
+                transform: [
+                  { perspective: 1000 },
+                  { rotateY: backRotate },
+                  { scale: winScale },
+                ],
+              },
             ]}
           >
-            <Text style={[styles.text, value === 'X' ? styles.x : styles.o]}>
+            {winning ? (
+              <Animated.View
+                style={[
+                  styles.glow,
+                  {
+                    backgroundColor: glowColor,
+                    opacity: glowOpacity,
+                  },
+                ]}
+              />
+            ) : null}
+            <Text
+              style={[
+                styles.text,
+                value === 'X' ? styles.x : styles.o,
+                winning && styles.winningText,
+              ]}
+            >
               {value}
             </Text>
           </Animated.View>
@@ -85,14 +132,14 @@ const Cell = ({ value, onPress, disabled, cellSize }) => {
 
 const styles = StyleSheet.create({
   cell: {
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
   inner: {
     width: '100%',
@@ -106,7 +153,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backfaceVisibility: 'hidden',
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: 16,
   },
   front: {
     backgroundColor: '#fff',
@@ -119,19 +166,31 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#fff',
   },
+  glow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 16,
+    opacity: 0.12,
+  },
   text: {
     fontSize: 44,
     fontWeight: '800',
   },
+  winningText: {
+    fontSize: 48,
+  },
   x: {
-    color: X_COLOR,
-    textShadowColor: X_COLOR,
+    color: COLORS.x,
+    textShadowColor: COLORS.x,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
   o: {
-    color: O_COLOR,
-    textShadowColor: O_COLOR,
+    color: COLORS.o,
+    textShadowColor: COLORS.o,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
