@@ -9,6 +9,7 @@ import { checkWinner, getWinningLine, isBoardFull, createEmptyBoard } from './ga
 import { getAIMove } from './ai';
 import { useTheme } from './theme';
 import { saveGameResult } from './history';
+import { startBackgroundMusic, stopBackgroundMusic } from './music';
 
 const BOARD_SIZE = Math.min(Dimensions.get('window').width - 56, 320);
 
@@ -122,6 +123,11 @@ const AIGame = ({ onBack }) => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    startBackgroundMusic();
+    return () => stopBackgroundMusic();
   }, []);
 
   useEffect(() => {
