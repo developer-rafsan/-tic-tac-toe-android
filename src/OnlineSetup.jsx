@@ -5,17 +5,116 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { findServer, connectRelay } from './network';
-import { BG_GRADIENT } from './theme';
+import { useTheme } from './theme';
+import ThemeToggle from './ThemeToggle';
+import LightOrbs from './LightOrbs';
 
-const X_COLOR = '#ff4757';
-const O_COLOR = '#2ed573';
+const makeStyles = (colors) =>
+  StyleSheet.create({
+    container: { flex: 1, paddingHorizontal: 24 },
+    toggleRow: { position: 'absolute', top: 8, right: 20, zIndex: 10 },
+    mainContent: { flex: 1, justifyContent: 'center' },
+    header: { marginBottom: 32 },
+    title: { fontSize: 34, fontWeight: '800', color: colors.text, marginBottom: 4 },
+    subtitle: { fontSize: 14, color: colors.textDim, fontWeight: '500' },
+    section: { gap: 14 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      flexDirection: 'row',
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      elevation: 3,
+    },
+    cardAccent: { width: 5 },
+    cardContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 16,
+      paddingRight: 18,
+      paddingLeft: 14,
+      gap: 14,
+    },
+    cardIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: colors.borderStrong,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cardIcon: { fontSize: 20 },
+    cardText: { flex: 1 },
+    cardTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: 2 },
+    cardDesc: { fontSize: 13, color: colors.textDim, fontWeight: '500' },
+    divider: { flexDirection: 'row', alignItems: 'center' },
+    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    dividerText: { marginHorizontal: 16, color: colors.textFaint, fontSize: 12, fontWeight: '600' },
+    inputLabel: { fontSize: 12, fontWeight: '600', color: colors.textDim, marginBottom: 8 },
+    input: {
+      width: '100%',
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingVertical: 14,
+      fontSize: 24,
+      color: colors.text,
+      textAlign: 'center',
+      letterSpacing: 8,
+      fontWeight: '800',
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    backBtn: { alignSelf: 'center', paddingVertical: 14, marginTop: 28, marginBottom: 20 },
+    backBtnText: { color: colors.textFaint, fontSize: 14, fontWeight: '500' },
+    statusContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    statusCard: {
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      paddingVertical: 32,
+      paddingHorizontal: 36,
+      width: '100%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    codeLabel: { fontSize: 13, color: colors.textDim, fontWeight: '500', marginBottom: 14 },
+    codeBox: {
+      backgroundColor: colors.borderStrong,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      marginBottom: 20,
+    },
+    codeText: { fontSize: 46, fontWeight: '800', color: colors.text, letterSpacing: 12 },
+    statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    statusLabel: { fontSize: 14, color: colors.textDim, fontWeight: '500' },
+    statusLabelTop: { marginTop: 16 },
+  });
 
 const OnlineSetup = ({ onBack, onStartGame }) => {
+  const { colors, gradients } = useTheme();
   const [screen, setScreen] = useState('main');
   const [status, setStatus] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [createdCode, setCreatedCode] = useState('');
   const cancelRef = useRef(false);
+
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const spinnerColor = colors.textFaint;
+  const X_COLOR = colors.x;
+  const O_COLOR = colors.o;
 
   const connectAndSend = async (msg) => {
     const relay = await connectRelay((m) => { if (!cancelRef.current) setStatus(m); });
@@ -73,7 +172,11 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
   };
 
   return (
-    <LinearGradient colors={BG_GRADIENT} style={styles.container}>
+    <LinearGradient colors={gradients.bg} style={styles.container}>
+      <LightOrbs />
+      <View style={styles.toggleRow}>
+        <ThemeToggle />
+      </View>
       {screen === 'main' ? (
         <View style={styles.mainContent}>
           <View style={styles.header}>
@@ -105,11 +208,11 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
               value={joinCode}
               onChangeText={(t) => setJoinCode(t.toUpperCase())}
               placeholder="ABCD"
-              placeholderTextColor="rgba(0,0,0,0.15)"
+              placeholderTextColor={colors.textFaint}
               autoCapitalize="characters"
               maxLength={4}
             />
-            <TouchableOpacity style={styles.joinCard} onPress={handleJoin} activeOpacity={0.92}>
+            <TouchableOpacity style={styles.card} onPress={handleJoin} activeOpacity={0.92}>
               <View style={[styles.cardAccent, { backgroundColor: O_COLOR }]} />
               <View style={styles.cardContent}>
                 <View style={styles.cardIconWrap}><Text style={styles.cardIcon}>🔗</Text></View>
@@ -135,13 +238,13 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
                   <Text style={styles.codeText}>{createdCode}</Text>
                 </View>
                 <View style={styles.statusRow}>
-                  <ActivityIndicator size="small" color="rgba(0,0,0,0.3)" />
+                  <ActivityIndicator size="small" color={spinnerColor} />
                   <Text style={styles.statusLabel}>{status}</Text>
                 </View>
               </>
             ) : (
               <>
-                <ActivityIndicator size="large" color="rgba(0,0,0,0.3)" />
+                <ActivityIndicator size="large" color={spinnerColor} />
                 <Text style={[styles.statusLabel, styles.statusLabelTop]}>{status}</Text>
               </>
             )}
@@ -154,38 +257,5 @@ const OnlineSetup = ({ onBack, onStartGame }) => {
     </LinearGradient>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f5f9', paddingHorizontal: 24 },
-  mainContent: { flex: 1, justifyContent: 'center' },
-  header: { marginBottom: 32 },
-  title: { fontSize: 34, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: 'rgba(0,0,0,0.4)', fontWeight: '500' },
-  section: { gap: 14 },
-  card: { backgroundColor: '#fff', borderRadius: 16, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  joinCard: { backgroundColor: '#fff', borderRadius: 16, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  cardAccent: { width: 5 },
-  cardContent: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingRight: 18, paddingLeft: 14, gap: 14 },
-  cardIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f2f5f9', justifyContent: 'center', alignItems: 'center' },
-  cardIcon: { fontSize: 20 },
-  cardText: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a2e', marginBottom: 2 },
-  cardDesc: { fontSize: 13, color: 'rgba(0,0,0,0.4)', fontWeight: '500' },
-  divider: { flexDirection: 'row', alignItems: 'center' },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.06)' },
-  dividerText: { marginHorizontal: 16, color: 'rgba(0,0,0,0.25)', fontSize: 12, fontWeight: '600' },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: 'rgba(0,0,0,0.4)', marginBottom: 8 },
-  input: { width: '100%', backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14, fontSize: 24, color: '#1a1a2e', textAlign: 'center', letterSpacing: 8, fontWeight: '800', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 2 },
-  backBtn: { alignSelf: 'center', paddingVertical: 14, marginTop: 28, marginBottom: 20 },
-  backBtnText: { color: 'rgba(0,0,0,0.3)', fontSize: 14, fontWeight: '500' },
-  statusContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  statusCard: { alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 36, width: '100%', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  codeLabel: { fontSize: 13, color: 'rgba(0,0,0,0.4)', fontWeight: '500', marginBottom: 14 },
-  codeBox: { backgroundColor: '#f2f5f9', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, marginBottom: 20 },
-  codeText: { fontSize: 46, fontWeight: '800', color: '#1a1a2e', letterSpacing: 12 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusLabel: { fontSize: 14, color: 'rgba(0,0,0,0.45)', fontWeight: '500' },
-  statusLabelTop: { marginTop: 16 },
-});
 
 export default OnlineSetup;

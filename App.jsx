@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Animated, StatusBar, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeProvider, useTheme } from './src/theme';
 import HomeScreen from './src/HomeScreen';
 import OfflineGame from './src/OfflineGame';
 import OnlineSetup from './src/OnlineSetup';
@@ -48,9 +49,10 @@ const ScreenTransition = ({ screenKey, children }) => {
   );
 };
 
-const App = () => {
+const AppContent = () => {
   const [currentScreen, setCurrentScreen] = useState(SCREENS.HOME);
   const [onlineConfig, setOnlineConfig] = useState(null);
+  const { colors, isDark } = useTheme();
 
   const navigate = (screen, params) => {
     if (screen === SCREENS.ONLINE_GAME) {
@@ -94,13 +96,26 @@ const App = () => {
   };
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#eef2f9" />
-      <SafeAreaView style={styles.container}>
+    <>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? '#0b0f1a' : '#eef2f9'}
+      />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
         <ScreenTransition screenKey={currentScreen}>
           {renderScreen()}
         </ScreenTransition>
       </SafeAreaView>
+    </>
+  );
+};
+
+const App = () => {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 };
@@ -108,7 +123,6 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#eef2f9',
   },
   transition: {
     flex: 1,

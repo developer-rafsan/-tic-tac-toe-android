@@ -1,72 +1,77 @@
 import React, { useRef, useEffect } from 'react';
-import { Animated, TouchableOpacity, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from './theme';
+import { Animated, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { useTheme } from './theme';
 
 const Cell = ({ value, onPress, disabled, cellSize, winning }) => {
-  const flipAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const winAnim = useRef(new Animated.Value(0)).current;
+  const { colors } = useTheme();
+  const appear = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+  const pressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(flipAnim, {
-      toValue: value ? 1 : 0,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-  }, [value, flipAnim]);
-
-  useEffect(() => {
-    if (winning) {
-      Animated.spring(winAnim, {
+    if (value) {
+      appear.setValue(0);
+      pop.setValue(0);
+      Animated.timing(appear, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+      Animated.spring(pop, {
         toValue: 1,
         friction: 4,
-        tension: 120,
+        tension: 170,
         useNativeDriver: true,
       }).start();
     } else {
-      winAnim.setValue(0);
+      appear.setValue(0);
+      pop.setValue(0);
     }
-  }, [winning, winAnim]);
+  }, [value, appear, pop]);
+
+  useEffect(() => {
+    if (winning) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 0, duration: 800, useNativeDriver: true }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+    pulse.setValue(0);
+  }, [winning, pulse]);
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.92,
+    Animated.timing(pressAnim, {
+      toValue: 1,
+      duration: 120,
       useNativeDriver: true,
-      friction: 8,
-      tension: 150,
     }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
+    Animated.timing(pressAnim, {
+      toValue: 0,
+      duration: 160,
       useNativeDriver: true,
-      friction: 8,
-      tension: 150,
     }).start();
   };
 
-  const frontRotate = flipAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
+  const glowColor = value === 'X' ? colors.x : colors.o;
 
-  const backRotate = flipAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['180deg', '360deg'],
-  });
+  const valueOpacity = appear.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const valueScale = pop.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
+  const valueRotateY = appear.interpolate({ inputRange: [0, 1], outputRange: ['80deg', '0deg'] });
+  const winOpa = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.3] });
+  const textGlow = pulse.interpolate({ inputRange: [0, 1], outputRange: [12, 28] });
+  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const ringOpa = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
 
-  const winScale = winAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.08],
-  });
-
-  const glowOpacity = winAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
-  const glowColor = value === 'X' ? COLORS.x : COLORS.o;
+  const inner = cellSize * 0.74;
+  const radius = inner * 0.32;
 
   return (
     <TouchableOpacity
@@ -75,56 +80,68 @@ const Cell = ({ value, onPress, disabled, cellSize, winning }) => {
       onPressOut={handlePressOut}
       disabled={disabled || !!value}
       activeOpacity={1}
+      style={[styles.cell, { width: cellSize, height: cellSize }]}
     >
       <Animated.View
-        style={[
-          styles.cell,
-          { width: cellSize, height: cellSize, transform: [{ scale: scaleAnim }] },
-        ]}
-      >
-        <View style={styles.inner}>
+        style={[styles.pressBg, { backgroundColor: colors.text, opacity: pressAnim }]}
+      />
+      {winning ? (
+        <>
           <Animated.View
+            pointerEvents="none"
             style={[
-              styles.face,
-              styles.front,
-              { transform: [{ perspective: 1000 }, { rotateY: frontRotate }] },
+              styles.winFill,
+              {
+                width: inner,
+                height: inner,
+                borderRadius: radius,
+                backgroundColor: glowColor,
+                opacity: winOpa,
+              },
             ]}
           />
           <Animated.View
+            pointerEvents="none"
             style={[
-              styles.face,
-              styles.back,
+              styles.ring,
               {
-                transform: [
-                  { perspective: 1000 },
-                  { rotateY: backRotate },
-                  { scale: winScale },
-                ],
+                width: inner,
+                height: inner,
+                borderRadius: radius,
+                borderColor: glowColor,
+                transform: [{ scale: ringScale }],
+                opacity: ringOpa,
               },
             ]}
-          >
-            {winning ? (
-              <Animated.View
-                style={[
-                  styles.glow,
-                  {
-                    backgroundColor: glowColor,
-                    opacity: glowOpacity,
-                  },
-                ]}
-              />
-            ) : null}
-            <Text
-              style={[
-                styles.text,
-                value === 'X' ? styles.x : styles.o,
-                winning && styles.winningText,
-              ]}
-            >
-              {value}
-            </Text>
-          </Animated.View>
-        </View>
+          />
+        </>
+      ) : null}
+      <Animated.View
+        style={[
+          styles.valueWrap,
+          {
+            opacity: valueOpacity,
+            transform: [
+              { perspective: 800 },
+              { rotateY: valueRotateY },
+              { scale: valueScale },
+            ],
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.text,
+            winning && styles.winningText,
+            {
+              color: glowColor,
+              textShadowColor: glowColor,
+              textShadowRadius: winning ? textGlow : 10,
+            },
+          ]}
+        >
+          {value}
+        </Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -132,67 +149,35 @@ const Cell = ({ value, onPress, disabled, cellSize, winning }) => {
 
 const styles = StyleSheet.create({
   cell: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  inner: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  face: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
-    backfaceVisibility: 'hidden',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    justifyContent: 'center',
   },
-  front: {
-    backgroundColor: '#fff',
-  },
-  back: {
+  pressBg: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#fff',
+    top: 6,
+    left: 6,
+    right: 6,
+    bottom: 6,
+    borderRadius: 14,
   },
-  glow: {
+  winFill: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 16,
-    opacity: 0.12,
+  },
+  ring: {
+    position: 'absolute',
+    borderWidth: 2.5,
+  },
+  valueWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
-    fontSize: 44,
+    fontSize: 46,
     fontWeight: '800',
+    textShadowOffset: { width: 0, height: 0 },
   },
   winningText: {
-    fontSize: 48,
-  },
-  x: {
-    color: COLORS.x,
-    textShadowColor: COLORS.x,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  o: {
-    color: COLORS.o,
-    textShadowColor: COLORS.o,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    fontSize: 50,
   },
 });
 
